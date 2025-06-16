@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Calendar,
   User,
@@ -8,9 +10,19 @@ import {
   CheckCircle,
   Circle,
   Play,
+  GripVertical,
 } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Card, CardContent } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { useTaskContext } from "../../contexts/TaskContext";
 import type { Task, TaskPriority, TaskStatus } from "../../api/task.api";
 import { cn } from "../../lib/utils";
 
@@ -66,6 +78,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onClick,
   isDragging = false,
 }) => {
+  const { updateTask } = useTaskContext();
+  const [showStatusSelect, setShowStatusSelect] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   const PriorityIcon = priorityConfig[task.priority].icon;
   const StatusIcon = statusConfig[task.status].icon;
 
@@ -93,88 +122,203 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     return user.username;
   };
 
+  const handleCheckboxChange = async (checked: boolean) => {
+    if (checked && task.status !== "DONE") {
+      try {
+        await updateTask(task.id, { status: "DONE" });
+      } catch (error) {
+        console.error("Failed to update task status:", error);
+      }
+    } else if (!checked && task.status === "DONE") {
+      try {
+        await updateTask(task.id, { status: "TODO" });
+      } catch (error) {
+        console.error("Failed to update task status:", error);
+      }
+    }
+  };
+
+  const handleStatusChange = async (newStatus: TaskStatus) => {
+    try {
+      await updateTask(task.id, { status: newStatus });
+      setShowStatusSelect(false);
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent card click when clicking on interactive elements
+    if (
+      (e.target as HTMLElement).closest(".status-select") ||
+      (e.target as HTMLElement).closest("[data-drag-handle]") ||
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest('[role="checkbox"]')
+    ) {
+      return;
+    }
+    onClick?.();
+  };
+
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.2 }}
+    <div
+      ref={setNodeRef}
+      style={style}
       className={cn("group", className)}
+      {...attributes}
     >
-      <Card
-        className={cn(
-          "h-full hover:shadow-md transition-shadow cursor-pointer",
-          isDragging && "opacity-50 scale-95"
-        )}
-        onClick={onClick}
+      <motion.div
+        whileHover={{ y: -2 }}
+        transition={{ duration: 0.2 }}
+        className="relative"
       >
-        <CardContent className="p-4 space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2">
-              {task.title}
-            </h3>
-
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Badge
-                variant="outline"
-                className={cn("text-xs", priorityConfig[task.priority].color)}
-              >
-                <PriorityIcon className="w-3 h-3 mr-1" />
-                {task.priority}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Description */}
-          {task.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {task.description}
-            </p>
+        <Card
+          className={cn(
+            "h-full hover:shadow-md transition-shadow cursor-pointer relative",
+            (isDragging || isSortableDragging) && "opacity-50 scale-95"
           )}
+          onClick={handleCardClick}
+        >
+          <CardContent className="p-4 space-y-3">
+            {/* Header with checkbox and title */}
+            <div className="flex items-start gap-2">
+              <Checkbox
+                checked={task.status === "DONE"}
+                onCheckedChange={handleCheckboxChange}
+                className="mt-0.5 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+              />
+              <div className="flex-1 flex items-start justify-between gap-2">
+                <h3
+                  className={cn(
+                    "font-medium text-sm group-hover:text-primary transition-colors line-clamp-2",
+                    task.status === "DONE" &&
+                      "line-through text-muted-foreground"
+                  )}
+                >
+                  {task.title}
+                </h3>
 
-          {/* Team and Status */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <div className="w-2 h-2 rounded-full bg-primary/60" />
-              <span className="truncate">{task.team.name}</span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-xs",
+                      priorityConfig[task.priority].color
+                    )}
+                  >
+                    <PriorityIcon className="w-3 h-3 mr-1" />
+                    {task.priority}
+                  </Badge>
+
+                  {/* Drag handle */}
+                  <div
+                    {...listeners}
+                    data-drag-handle
+                    className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <GripVertical className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <Badge
-              variant="outline"
-              className={cn("text-xs", statusConfig[task.status].color)}
-            >
-              <StatusIcon className="w-3 h-3 mr-1" />
-              {statusConfig[task.status].label}
-            </Badge>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
-            {/* Assignee */}
-            {task.assignee && (
-              <div className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                <span className="truncate">
-                  {getDisplayName(task.assignee)}
-                </span>
-              </div>
-            )}
-
-            {/* Due Date */}
-            {task.dueDate && (
-              <div
+            {/* Description */}
+            {task.description && (
+              <p
                 className={cn(
-                  "flex items-center gap-1",
-                  isOverdue && "text-red-500"
+                  "text-xs text-muted-foreground line-clamp-2 ml-6",
+                  task.status === "DONE" && "line-through"
                 )}
               >
-                <Calendar className="w-3 h-3" />
-                <span>{formatDate(task.dueDate)}</span>
-                {isOverdue && <AlertCircle className="w-3 h-3 text-red-500" />}
-              </div>
+                {task.description}
+              </p>
             )}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+
+            {/* Team and Status */}
+            <div className="flex items-center justify-between gap-2 ml-6">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-primary/60" />
+                <span className="truncate">{task.team.name}</span>
+              </div>
+
+              <div className="status-select">
+                <Select
+                  value={task.status}
+                  onValueChange={handleStatusChange}
+                  open={showStatusSelect}
+                  onOpenChange={setShowStatusSelect}
+                >
+                  <SelectTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs cursor-pointer hover:bg-muted/50 transition-colors",
+                        statusConfig[task.status].color
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowStatusSelect(!showStatusSelect);
+                      }}
+                    >
+                      <StatusIcon className="w-3 h-3 mr-1" />
+                      {statusConfig[task.status].label}
+                    </Badge>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TODO">
+                      <div className="flex items-center gap-2">
+                        <Circle className="w-3 h-3" />
+                        To Do
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="IN_PROGRESS">
+                      <div className="flex items-center gap-2">
+                        <Play className="w-3 h-3" />
+                        In Progress
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="DONE">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-3 h-3" />
+                        Done
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t ml-6">
+              {/* Assignee */}
+              {task.assignee && (
+                <div className="flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  <span className="truncate">
+                    {getDisplayName(task.assignee)}
+                  </span>
+                </div>
+              )}
+
+              {/* Due Date */}
+              {task.dueDate && (
+                <div
+                  className={cn(
+                    "flex items-center gap-1",
+                    isOverdue && "text-red-500"
+                  )}
+                >
+                  <Calendar className="w-3 h-3" />
+                  <span>{formatDate(task.dueDate)}</span>
+                  {isOverdue && (
+                    <AlertCircle className="w-3 h-3 text-red-500" />
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
   );
 };
