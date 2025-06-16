@@ -1,8 +1,5 @@
 {
   "buildCommand": "vite build",
-  "typescript": {
-    "ignoreBuildErrors": true
-  },
   "functions": {
     "app/api/**/*.js": {
       "runtime": "@vercel/node"
