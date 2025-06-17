@@ -43,7 +43,8 @@ export function TaskBoard({
   onCreateTask,
   onTaskClick,
 }: TaskBoardProps) {
-  const { state, fetchTasks, reorderTask, setFilters } = useTaskContext();
+  const { state, fetchTasks, optimisticReorderTask, setFilters } =
+    useTaskContext();
   const { columns, loading, error, filters } = state;
 
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
@@ -72,18 +73,30 @@ export function TaskBoard({
     if (!over) return;
 
     const activeTaskId = active.id as string;
-    const overColumnId = over.id as TaskStatus;
 
     // Find the active task
     const activeTask = state.tasks.find((t) => t.id === activeTaskId);
     if (!activeTask) return;
 
-    // If the task is being dragged over a different column
-    if (activeTask.status !== overColumnId) {
-      // Update task status optimistically
-      const updatedTask = { ...activeTask, status: overColumnId };
-      // You could dispatch an optimistic update here if needed
+    // Determine the target column
+    let targetColumnId: TaskStatus | null = null;
+
+    if (
+      typeof over.id === "string" &&
+      ["TODO", "IN_PROGRESS", "DONE"].includes(over.id)
+    ) {
+      // Dragging over a column
+      targetColumnId = over.id as TaskStatus;
+    } else {
+      // Dragging over another task
+      const overTask = state.tasks.find((t) => t.id === over.id);
+      if (overTask) {
+        targetColumnId = overTask.status;
+      }
     }
+
+    // Visual feedback could be added here if needed
+    // For now, we'll let the DragOverlay handle the visual feedback
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -97,9 +110,17 @@ export function TaskBoard({
 
     if (!activeTask) return;
 
+    // Store original position for optimistic update
+    const originalStatus = activeTask.status;
+    const originalColumn = columns.find((col) => col.id === originalStatus);
+    const originalIndex = originalColumn
+      ? originalColumn.tasks.findIndex((t) => t.id === activeTaskId)
+      : 0;
+
     // Determine if we're dropping on a column or another task
     let newStatus: TaskStatus;
     let newOrder = 0;
+    let destIndex = 0;
 
     if (
       typeof over.id === "string" &&
@@ -109,6 +130,7 @@ export function TaskBoard({
       newStatus = over.id as TaskStatus;
       const targetColumn = columns.find((col) => col.id === newStatus);
       newOrder = targetColumn ? targetColumn.tasks.length : 0;
+      destIndex = newOrder;
     } else {
       // Dropped on another task - find the column and position
       const overTask = state.tasks.find((t) => t.id === over.id);
@@ -121,13 +143,22 @@ export function TaskBoard({
           (t) => t.id === over.id
         );
         newOrder = overTaskIndex;
+        destIndex = overTaskIndex;
       }
     }
 
     // Only update if something changed
     if (activeTask.status !== newStatus || activeTask.order !== newOrder) {
       try {
-        await reorderTask(activeTaskId, newOrder, newStatus);
+        await optimisticReorderTask(
+          activeTaskId,
+          newOrder,
+          newStatus,
+          originalStatus,
+          newStatus,
+          originalIndex,
+          destIndex
+        );
       } catch (error) {
         console.error("Failed to reorder task:", error);
       }
@@ -251,11 +282,12 @@ export function TaskBoard({
 
           <DragOverlay>
             {activeTask ? (
-              <div className="opacity-90">
+              <div className="opacity-90 transform rotate-2 scale-105 shadow-2xl">
                 <TaskCard
                   task={activeTask}
                   onClick={() => {}}
                   isDragging={true}
+                  className="border-2 border-primary/50"
                 />
               </div>
             ) : null}

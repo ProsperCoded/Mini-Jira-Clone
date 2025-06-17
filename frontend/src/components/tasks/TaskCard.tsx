@@ -78,8 +78,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onClick,
   isDragging = false,
 }) => {
-  const { updateTask } = useTaskContext();
+  const { optimisticUpdateTask } = useTaskContext();
   const [showStatusSelect, setShowStatusSelect] = useState(false);
+  const [isCheckboxHovered, setIsCheckboxHovered] = useState(false);
 
   const {
     attributes,
@@ -125,13 +126,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const handleCheckboxChange = async (checked: boolean) => {
     if (checked && task.status !== "DONE") {
       try {
-        await updateTask(task.id, { status: "DONE" });
+        await optimisticUpdateTask(task.id, { status: "DONE" });
       } catch (error) {
         console.error("Failed to update task status:", error);
       }
     } else if (!checked && task.status === "DONE") {
       try {
-        await updateTask(task.id, { status: "TODO" });
+        await optimisticUpdateTask(task.id, { status: "TODO" });
       } catch (error) {
         console.error("Failed to update task status:", error);
       }
@@ -140,7 +141,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
     try {
-      await updateTask(task.id, { status: newStatus });
+      await optimisticUpdateTask(task.id, { status: newStatus });
       setShowStatusSelect(false);
     } catch (error) {
       console.error("Failed to update task status:", error);
@@ -182,12 +183,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <CardContent className="p-4 space-y-3">
             {/* Header with checkbox and title */}
             <div className="flex items-start gap-2">
-              <Checkbox
-                checked={task.status === "DONE"}
-                onCheckedChange={handleCheckboxChange}
-                className="mt-0.5 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                onClick={(e) => e.stopPropagation()}
-              />
+              <div className="relative">
+                <Checkbox
+                  checked={task.status === "DONE"}
+                  onCheckedChange={handleCheckboxChange}
+                  className={cn(
+                    "mt-0.5 transition-all duration-200 hover:scale-110 hover:shadow-sm",
+                    "data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600",
+                    "hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-950/20",
+                    isCheckboxHovered &&
+                      task.status !== "DONE" &&
+                      "border-green-400 bg-green-50 dark:bg-green-950/20"
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseEnter={() => setIsCheckboxHovered(true)}
+                  onMouseLeave={() => setIsCheckboxHovered(false)}
+                />
+                {/* Faded check mark on hover */}
+                {isCheckboxHovered && task.status !== "DONE" && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <CheckCircle className="w-3 h-3 text-green-400 opacity-50" />
+                  </div>
+                )}
+              </div>
               <div className="flex-1 flex items-start justify-between gap-2">
                 <h3
                   className={cn(

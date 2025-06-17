@@ -3,7 +3,7 @@ import React, {
   useContext,
   useReducer,
   useCallback,
-  ReactNode,
+  type ReactNode,
 } from "react";
 import { taskApi } from "../api/task.api";
 import type {
@@ -211,11 +211,24 @@ type TaskContextType = {
   fetchTasks: (teamId: string, filters?: Partial<TaskFilters>) => Promise<void>;
   createTask: (data: TaskFormData) => Promise<void>;
   updateTask: (id: string, data: Partial<TaskFormData>) => Promise<void>;
+  optimisticUpdateTask: (
+    id: string,
+    data: Partial<TaskFormData>
+  ) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   reorderTask: (
     taskId: string,
     newOrder: number,
     newStatus?: TaskStatus
+  ) => Promise<void>;
+  optimisticReorderTask: (
+    taskId: string,
+    newOrder: number,
+    newStatus?: TaskStatus,
+    sourceColumn?: TaskStatus,
+    destColumn?: TaskStatus,
+    sourceIndex?: number,
+    destIndex?: number
   ) => Promise<void>;
   setFilters: (filters: Partial<TaskFilters>) => void;
   setSelectedTask: (task: Task | null) => void;
@@ -294,6 +307,40 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const optimisticUpdateTask = useCallback(
+    async (id: string, data: Partial<TaskFormData>) => {
+      dispatch({ type: "SET_ERROR", payload: null });
+
+      // Find the original task for rollback
+      const originalTask = state.tasks.find((task) => task.id === id);
+      if (!originalTask) {
+        throw new Error("Task not found");
+      }
+
+      // Create optimistic update
+      const optimisticTask = { ...originalTask, ...data };
+
+      // Apply optimistic update immediately
+      dispatch({ type: "UPDATE_TASK", payload: optimisticTask });
+
+      try {
+        // Make the actual API call
+        const updatedTask = await taskApi.update(id, data);
+        // Update with the real response
+        dispatch({ type: "UPDATE_TASK", payload: updatedTask });
+      } catch (error: any) {
+        // Rollback to original state on failure
+        dispatch({ type: "UPDATE_TASK", payload: originalTask });
+        dispatch({
+          type: "SET_ERROR",
+          payload: error.message || "Failed to update task",
+        });
+        throw error;
+      }
+    },
+    [state.tasks]
+  );
+
   const deleteTask = useCallback(async (id: string) => {
     dispatch({ type: "SET_ERROR", payload: null });
 
@@ -332,6 +379,77 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const optimisticReorderTask = useCallback(
+    async (
+      taskId: string,
+      newOrder: number,
+      newStatus?: TaskStatus,
+      sourceColumn?: TaskStatus,
+      destColumn?: TaskStatus,
+      sourceIndex?: number,
+      destIndex?: number
+    ) => {
+      dispatch({ type: "SET_ERROR", payload: null });
+
+      // Store original state for rollback
+      const originalTasks = [...state.tasks];
+      const originalColumns = state.columns.map((col) => ({
+        ...col,
+        tasks: [...col.tasks],
+      }));
+
+      // Apply optimistic update immediately if we have reorder info
+      if (
+        sourceColumn &&
+        destColumn &&
+        sourceIndex !== undefined &&
+        destIndex !== undefined
+      ) {
+        dispatch({
+          type: "REORDER_TASKS",
+          payload: {
+            sourceColumn,
+            destColumn,
+            sourceIndex,
+            destIndex,
+            taskId,
+          },
+        });
+      } else if (newStatus) {
+        // Fallback: just update the task status optimistically
+        const originalTask = state.tasks.find((task) => task.id === taskId);
+        if (originalTask) {
+          const optimisticTask = {
+            ...originalTask,
+            status: newStatus,
+            order: newOrder,
+          };
+          dispatch({ type: "UPDATE_TASK", payload: optimisticTask });
+        }
+      }
+
+      try {
+        const reorderData = {
+          newOrder,
+          ...(newStatus && { newStatus }),
+        };
+
+        const updatedTask = await taskApi.reorder(taskId, reorderData);
+        // Update with the real response from server
+        dispatch({ type: "UPDATE_TASK", payload: updatedTask });
+      } catch (error: any) {
+        // Rollback to original state on failure
+        dispatch({ type: "SET_TASKS", payload: originalTasks });
+        dispatch({
+          type: "SET_ERROR",
+          payload: error.message || "Failed to reorder task",
+        });
+        throw error;
+      }
+    },
+    [state.tasks, state.columns]
+  );
+
   const setFilters = useCallback((filters: Partial<TaskFilters>) => {
     dispatch({ type: "SET_FILTERS", payload: filters });
   }, []);
@@ -353,8 +471,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     fetchTasks,
     createTask,
     updateTask,
+    optimisticUpdateTask,
     deleteTask,
     reorderTask,
+    optimisticReorderTask,
     setFilters,
     setSelectedTask,
     setCurrentTeamId,
