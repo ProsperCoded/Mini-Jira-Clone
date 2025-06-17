@@ -110,6 +110,8 @@ POST   /auth/logout             - User logout
 
 ### Installation
 
+NB: When testing locally Change the BASE URL to the to that of the server https://localhost:3001
+
 1. **Clone the repository**
 
 ```bash
