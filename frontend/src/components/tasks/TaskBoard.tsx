@@ -173,7 +173,12 @@ export function TaskBoard({
   return (
     <div className="h-full flex flex-col space-y-6">
       {/* Header with filters and actions */}
-      <MagicCard className="p-6" gradientColor="#262626">
+      <MagicCard
+        className="p-6"
+        gradientFrom="#10b981"
+        gradientTo="#059669"
+        gradientColor="rgba(16, 185, 129, 0.1)"
+      >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex flex-col sm:flex-row gap-4 flex-1">
             <div className="relative flex-1 max-w-sm">

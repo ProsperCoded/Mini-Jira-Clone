@@ -16,6 +16,12 @@ import { Badge } from "../ui/badge";
 import { Card, CardContent } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import { useTaskContext } from "../../contexts/TaskContext";
 import type { Task, TaskStatus } from "../../api/task.api";
 import { cn } from "../../lib/utils";
@@ -206,14 +212,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   </Badge>
 
                   {/* Drag handle */}
-                  <div
-                    {...listeners}
-                    data-drag-handle
-                    className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <GripVertical className="w-3 h-3 text-muted-foreground" />
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          {...listeners}
+                          data-drag-handle
+                          className="cursor-grab active:cursor-grabbing p-2 hover:bg-muted/80 hover:shadow-sm rounded-md opacity-60 group-hover:opacity-100 transition-all duration-200 border border-transparent hover:border-border"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <GripVertical className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        <p>Click and drag to move task</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             </div>
