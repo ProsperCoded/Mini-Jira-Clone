@@ -15,15 +15,9 @@ import {
 import { Badge } from "../ui/badge";
 import { Card, CardContent } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
 import { useTaskContext } from "../../contexts/TaskContext";
-import type { Task, TaskPriority, TaskStatus } from "../../api/task.api";
+import type { Task, TaskStatus } from "../../api/task.api";
 import { cn } from "../../lib/utils";
 
 interface TaskCardProps {
@@ -171,13 +165,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         whileHover={{ y: -2 }}
         transition={{ duration: 0.2 }}
         className="relative"
+        onClick={handleCardClick}
       >
         <Card
           className={cn(
             "h-full hover:shadow-md transition-shadow cursor-pointer relative",
             (isDragging || isSortableDragging) && "opacity-50 scale-95"
           )}
-          onClick={handleCardClick}
         >
           <CardContent className="p-4 space-y-3">
             {/* Header with checkbox and title */}
@@ -186,6 +180,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 checked={task.status === "DONE"}
                 onCheckedChange={handleCheckboxChange}
                 className="mt-0.5 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                onClick={(e) => e.stopPropagation()}
               />
               <div className="flex-1 flex items-start justify-between gap-2">
                 <h3
@@ -215,6 +210,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     {...listeners}
                     data-drag-handle
                     className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <GripVertical className="w-3 h-3 text-muted-foreground" />
                   </div>
@@ -241,28 +237,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 <span className="truncate">{task.team.name}</span>
               </div>
 
-              <div className="status-select">
-                <Select
-                  value={task.status}
-                  onValueChange={handleStatusChange}
-                  open={showStatusSelect}
-                  onOpenChange={setShowStatusSelect}
-                >
-                  <SelectTrigger asChild>
+              <div
+                className="status-select"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Select value={task.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger>
                     <Badge
                       variant="outline"
                       className={cn(
                         "text-xs cursor-pointer hover:bg-muted/50 transition-colors",
                         statusConfig[task.status].color
                       )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowStatusSelect(!showStatusSelect);
-                      }}
                     >
                       <StatusIcon className="w-3 h-3 mr-1" />
                       {statusConfig[task.status].label}
                     </Badge>
+                    {/* Hello */}
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="TODO">

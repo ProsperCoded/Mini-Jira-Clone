@@ -216,7 +216,7 @@ const DashboardHome: React.FC = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 }}
                 >
-                  <TeamCard
+                  {/* <TeamCard
                     team={team}
                     onJoin={handleJoinTeam}
                     className={
@@ -224,7 +224,7 @@ const DashboardHome: React.FC = () => {
                         ? "opacity-50 pointer-events-none"
                         : ""
                     }
-                  />
+                  /> */}
                 </motion.div>
               ))}
             </div>
@@ -362,6 +362,7 @@ const DashboardHome: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {dashboardStats.importantTasks.map((task) => (
                       <TaskCard key={task.id} task={task} />
+                      // <div key={task.id}>{task.title}</div>
                     ))}
                   </div>
                 ) : (

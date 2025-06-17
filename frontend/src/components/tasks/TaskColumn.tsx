@@ -25,14 +25,14 @@ const statusConfig = {
   TODO: {
     color: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
     borderColor: "border-blue-500/20",
-    gradientFrom: "#3B82F6",
-    gradientTo: "#1E40AF",
+    gradientFrom: "#10b981",
+    gradientTo: "#059669",
   },
   IN_PROGRESS: {
     color: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300",
     borderColor: "border-yellow-500/20",
-    gradientFrom: "#F59E0B",
-    gradientTo: "#D97706",
+    gradientFrom: "#10b981",
+    gradientTo: "#059669",
   },
   DONE: {
     color: "bg-green-500/10 text-green-700 dark:text-green-300",

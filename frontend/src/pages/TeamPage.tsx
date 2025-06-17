@@ -407,7 +407,12 @@ export function TeamPage() {
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-2 p-2">
-                      <MagicCard className="p-3">
+                      <MagicCard
+                        className="p-3"
+                        gradientFrom="#10b981"
+                        gradientTo="#059669"
+                        gradientColor="rgba(16, 185, 129, 0.1)"
+                      >
                         <div className="text-xs text-muted-foreground mb-1">
                           Team Progress
                         </div>
@@ -466,7 +471,12 @@ export function TeamPage() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Team Header */}
-          <MagicCard className="m-6 mb-4 p-6 relative overflow-hidden">
+          <MagicCard
+            className="m-6 mb-4 p-6 relative overflow-hidden"
+            gradientFrom="#10b981"
+            gradientTo="#059669"
+            gradientColor="rgba(16, 185, 129, 0.1)"
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">

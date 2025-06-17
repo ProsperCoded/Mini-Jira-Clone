@@ -246,7 +246,7 @@ export function TaskBoard({
 
           <DragOverlay>
             {activeTask ? (
-              <div className="rotate-5 opacity-90">
+              <div className="opacity-90">
                 <TaskCard
                   task={activeTask}
                   onClick={() => {}}
